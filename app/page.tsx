@@ -291,6 +291,11 @@ export default function Page() {
         <div className="site-header-inner">
           <div>
             <div className="site-title">GridMRR</div>
+            <div className="site-nav">
+              <a href="/stacked-rows" className="site-nav-link">Stacked Rows</a>
+              <a href="/pixel-map" className="site-nav-link">Pixel Map</a>
+              <a href="/vertical" className="site-nav-link">Vertical</a>
+            </div>
             <div className="site-subtitle">
               Data taken from{' '}
               <a href="https://trustmrr.com" target="_blank" rel="noreferrer">

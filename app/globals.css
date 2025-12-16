@@ -40,6 +40,25 @@ body {
   letter-spacing: -0.02em;
 }
 
+.site-nav {
+  margin-top: 8px;
+  display: flex;
+  gap: 16px;
+}
+
+.site-nav-link {
+  font-size: 14px;
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.site-nav-link:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
 .site-subtitle {
   margin-top: 4px;
   font-size: 14px;
@@ -215,6 +234,92 @@ body {
   color: var(--text-muted);
 }
 
+/* Stacked Rows Visualization */
+.stacked-rows-container {
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stacked-row {
+  height: 18px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  min-width: 200px; /* Ensure minimum width for readability */
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.stacked-row:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  z-index: 1;
+  position: relative;
+}
+
+.stacked-row-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.stacked-row-logo {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stacked-row-logo img {
+  width: 16px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.stacked-row-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stacked-row-mrr {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-left: auto;
+  flex-shrink: 0;
+  padding-left: 12px;
+}
+
+.stacked-row-growth {
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  padding-left: 12px;
+  min-width: 60px;
+  text-align: right;
+}
+
 .site-footer {
   padding: 6px 2.5vw 12px;
 }
@@ -222,6 +327,91 @@ body {
 .site-footer-inner {
   max-width: 1120px;
   margin: 0 auto;
+}
+
+/* Vertical Bars Visualization */
+.vertical-bars-container {
+  width: 100%;
+  height: calc(100vh - 140px);
+  padding: 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: flex-end;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.vertical-bar {
+  min-width: 60px;
+  width: 60px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 4px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  flex-shrink: 0;
+}
+
+.vertical-bar:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  z-index: 1;
+  position: relative;
+}
+
+.vertical-bar-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  justify-content: flex-start;
+}
+
+.vertical-bar-logo {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vertical-bar-logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.vertical-bar-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #0f172a;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.vertical-bar-mrr {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  margin-top: auto;
+  padding-top: 4px;
 }
 
 @media (max-width: 900px) {
@@ -237,3 +427,38 @@ body {
     column-width: 220px;
   }
 }
+
+/* Pixel Map */
+.pixel-map-container {
+  width: 100%;
+  height: calc(100vh - 110px);
+  display: grid;
+  padding: 4px;
+  gap: 0;
+}
+
+.pixel-cell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.pixel-cell:hover {
+  outline: 1px solid rgba(15, 23, 42, 0.4);
+  z-index: 2;
+}
+
+.pixel-cell-label {
+  position: absolute;
+  inset: 2px 3px;
+  font-size: 9px;
+  font-weight: 600;
+  color: #0f172a;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+

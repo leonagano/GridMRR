@@ -1,1 +1,6 @@
-{}
+{
+  "/page": "app/page.js",
+  "/stacked-rows/page": "app/stacked-rows/page.js",
+  "/vertical/page": "app/vertical/page.js",
+  "/pixel-map/page": "app/pixel-map/page.js"
+}
