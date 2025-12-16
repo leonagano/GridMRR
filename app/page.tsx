@@ -86,6 +86,14 @@ function formatGrowth(growth: number): string {
   return `${sign}${pct.toFixed(1)}% MoM`;
 }
 
+function addRefToLink(link: string): string {
+  if (link.includes('trustmrr.com')) {
+    const separator = link.includes('?') ? '&' : '?';
+    return `${link}${separator}ref=gridmrr`;
+  }
+  return link;
+}
+
 interface TreemapNode extends Company {
   x: number;
   y: number;
@@ -298,7 +306,7 @@ export default function Page() {
             </div>
             <div className="site-subtitle">
               Data taken from{' '}
-              <a href="https://trustmrr.com" target="_blank" rel="noreferrer">
+              <a href="https://trustmrr.com?ref=gridmrr" target="_blank" rel="noreferrer">
                 TrustMRR
               </a>
               . GridMRR is not affiliated with, endorsed by, or partnered with TrustMRR. Created by{' '}
@@ -342,7 +350,7 @@ export default function Page() {
                   return (
                     <a
                       key={node.name}
-                      href={node.link}
+                      href={addRefToLink(node.link)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`treemap-card ${isColumn3OrLater ? 'treemap-card-compact' : ''} ${isLast4Columns ? 'treemap-card-minimal' : ''}`}

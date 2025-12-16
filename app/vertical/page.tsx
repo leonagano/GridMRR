@@ -65,6 +65,14 @@ function formatMRR(mrr: number): string {
   });
 }
 
+function addRefToLink(link: string): string {
+  if (link.includes('trustmrr.com')) {
+    const separator = link.includes('?') ? '&' : '?';
+    return `${link}${separator}ref=gridmrr`;
+  }
+  return link;
+}
+
 const data = (companies as Company[]).sort((a, b) => b.mrr - a.mrr);
 const maxMRR = Math.max(...data.map(d => d.mrr));
 
@@ -117,7 +125,7 @@ export default function VerticalPage() {
               return (
                 <a
                   key={company.name}
-                  href={company.link}
+                  href={addRefToLink(company.link)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="vertical-bar"

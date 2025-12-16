@@ -72,6 +72,14 @@ function pickColor(index: number) {
   return `linear-gradient(145deg, ${shadeColor(base, -3)}, ${shadeColor(base, 35)})`;
 }
 
+function addRefToLink(link: string): string {
+  if (link.includes('trustmrr.com')) {
+    const separator = link.includes('?') ? '&' : '?';
+    return `${link}${separator}ref=gridmrr`;
+  }
+  return link;
+}
+
 const data = (companies as Company[]).sort((a, b) => b.mrr - a.mrr);
 
 const LABEL_PIXEL_THRESHOLD = 80; // show inline label only for large blocks
@@ -215,7 +223,7 @@ export default function PixelMapPage() {
                 // eslint-disable-next-line jsx-a11y/anchor-is-valid
                 <a
                   key={idx}
-                  href={meta.link}
+                  href={addRefToLink(meta.link)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="pixel-cell"
