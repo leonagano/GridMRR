@@ -1,7 +1,6 @@
-import type { Metadata } from 'next';
 import './globals.css';
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'GridMRR',
   description: 'Treemap-style visualization of SaaS MRR dominance',
 };
