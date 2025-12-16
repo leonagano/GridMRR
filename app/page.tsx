@@ -304,21 +304,6 @@ export default function Page() {
               <a href="/pixel-map" className="site-nav-link">Pixel Map</a>
               <a href="/vertical" className="site-nav-link">Vertical</a>
             </div>
-            <div className="site-subtitle">
-              Data taken from{' '}
-              <a href="https://trustmrr.com?ref=gridmrr" target="_blank" rel="noreferrer">
-                TrustMRR
-              </a>
-              . GridMRR is not affiliated with, endorsed by, or partnered with TrustMRR. Created by{' '}
-              <a href="https://x.com/leonagano" target="_blank" rel="noreferrer">
-                Leo
-              </a>
-              . Approved by{' '}
-              <a href="https://x.com/marclou" target="_blank" rel="noreferrer">
-                Marc
-              </a>
-              ?
-            </div>
           </div>
         </div>
       </header>
@@ -377,6 +362,26 @@ export default function Page() {
           </div>
         </section>
       </main>
+
+      <footer className="site-footer">
+        <div className="site-footer-inner">
+          <div className="footer-copy">
+            Data taken from{' '}
+            <a href="https://trustmrr.com?ref=gridmrr" target="_blank" rel="noreferrer">
+              TrustMRR
+            </a>
+            . GridMRR is not affiliated with, endorsed by, or partnered with TrustMRR. Created by{' '}
+            <a href="https://x.com/leonagano" target="_blank" rel="noreferrer">
+              Leo
+            </a>
+            . Approved by{' '}
+            <a href="https://x.com/marclou" target="_blank" rel="noreferrer">
+              Marc
+            </a>
+            ?
+          </div>
+        </div>
+      </footer>
 
     </>
   );
