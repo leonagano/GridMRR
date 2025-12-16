@@ -2,11 +2,11 @@
   Scraper for TrustMRR listings.
   - Plain Node.js ESM script (no TypeScript runtime loaders)
   - HTML parsing only via jsdom
-  - Respects robots.txt best-effort
+  - Reads from local rawhtml.txt file
   - Normalizes MRR values to numeric USD
 
   Usage:
-    TRUSTMRR_URL="https://trustmrr.com/startups" npm run scrape
+    npm run scrape
 */
 
 import fs from 'node:fs/promises';
@@ -14,59 +14,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 
-const TRUSTMRR_URL = process.env.TRUSTMRR_URL ?? '';
-
-if (!TRUSTMRR_URL) {
-  // eslint-disable-next-line no-console
-  console.error('TRUSTMRR_URL is required, e.g. TRUSTMRR_URL="https://trustmrr.com/startups" npm run scrape');
-  process.exit(1);
-}
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function fetchText(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'GridMRR-bot/0.1 (static scraper)' },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-  }
-  return res.text();
-}
+// Base URL for constructing absolute URLs from relative paths
+const BASE_URL = 'https://trustmrr.com';
 
-function isPathDisallowed(robotsTxt, targetPath) {
-  const lines = robotsTxt.split(/\r?\n/).map((l) => l.trim());
-  let appliesToUs = false;
-
-  for (const line of lines) {
-    if (!line || line.startsWith('#')) continue;
-    const [directiveRaw, valueRaw = ''] = line.split(':', 2).map((p) => p.trim());
-    const directive = directiveRaw.toLowerCase();
-
-    if (directive === 'user-agent') {
-      const agent = valueRaw.toLowerCase();
-      appliesToUs = agent === '*' || agent.includes('gridmrr');
-    } else if (appliesToUs && directive === 'disallow') {
-      if (!valueRaw) continue;
-      if (targetPath.startsWith(valueRaw)) return true;
-    }
-  }
-
-  return false;
-}
-
-async function ensureAllowed(url) {
-  const u = new URL(url);
-  const robotsUrl = `${u.origin}/robots.txt`;
+async function readHtmlFile() {
+  const htmlPath = path.resolve(__dirname, 'rawhtml.txt');
   try {
-    const robots = await fetchText(robotsUrl);
-    if (isPathDisallowed(robots, u.pathname)) {
-      throw new Error(`Scraping disallowed by robots.txt for path: ${u.pathname}`);
-    }
+    const html = await fs.readFile(htmlPath, 'utf8');
+    return html;
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn('Warning: could not verify robots.txt:', err.message);
+    console.error(`Failed to read ${htmlPath}:`, err.message);
+    throw err;
   }
 }
 
@@ -87,20 +49,53 @@ function parsePercentToNumber(value) {
 }
 
 function extractCompaniesFromHtml(html, baseUrl) {
-  const dom = new JSDOM(html);
+  // First, extract all startup hrefs from the raw HTML before parsing
+  // This is necessary because JSDOM may restructure invalid HTML where <a> contains <td>
+  const startupHrefs = [];
+  const rowMatches = html.matchAll(/<tr[^>]*data-slot="table-row"[^>]*>([\s\S]*?)<\/tr>/g);
+  for (const match of rowMatches) {
+    const rowHtml = match[0];
+    // Look for <a class="contents" href="/startup/...">
+    const hrefMatch = rowHtml.match(/<a[^>]*class=["']contents["'][^>]*href=["']([^"']+)["']/);
+    if (hrefMatch && hrefMatch[1].startsWith('/startup/')) {
+      startupHrefs.push(hrefMatch[1]);
+    } else {
+      // Try alternative pattern
+      const altMatch = rowHtml.match(/href=["'](\/startup\/[^"']+)["']/);
+      if (altMatch) {
+        startupHrefs.push(altMatch[1]);
+      } else {
+        startupHrefs.push(''); // No link found for this row
+      }
+    }
+  }
+
+  // Wrap HTML fragment in a proper HTML document structure
+  // The rawhtml.txt file contains just a <tbody> fragment
+  const wrappedHtml = `<html><body><table>${html}</table></body></html>`;
+  const dom = new JSDOM(wrappedHtml);
   const doc = dom.window.document;
 
   const rows = Array.from(doc.querySelectorAll('tr[data-slot="table-row"]'));
 
   const companies = [];
 
-  for (const row of rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const href = startupHrefs[i] || '';
+    
     try {
-      // Outer link wrapping the whole row, e.g. <a class="contents" href="/startup/supergrow">
-      const startupLinkEl = row.querySelector('a.contents');
-      const logoEl = row.querySelector('td img');
-      const nameEl = row.querySelector('td .font-medium');
+      
+      // Get all table cells
+      const cells = Array.from(row.querySelectorAll('td'));
+      
+      // Logo is in the second cell (index 1), which contains the company info
+      // It can be either an <img> tag or a gradient div (no logo)
+      const companyCell = cells[1];
+      const logoEl = companyCell?.querySelector('img');
+      const nameEl = companyCell?.querySelector('.font-medium');
 
+      // MRR and MoM are in cells with .font-mono class
       const monoCells = row.querySelectorAll('td.font-mono');
       const mrrText = monoCells[0]?.textContent ?? '';
       const momText = monoCells[1]?.textContent ?? '';
@@ -115,10 +110,36 @@ function extractCompaniesFromHtml(html, baseUrl) {
         continue;
       }
 
-      const logoSrc = logoEl?.getAttribute('src') ?? '';
-      const logo = logoSrc ? new URL(logoSrc, baseUrl).toString() : '';
+      // Extract logo URL, handling Next.js image optimization URLs
+      let logo = '';
+      if (logoEl) {
+        let logoSrc = logoEl.getAttribute('src') || logoEl.getAttribute('srcset')?.split(' ')[0] || '';
+        
+        // Extract actual URL from Next.js image optimization URLs
+        // Format: /_next/image?url=https%3A%2F%2F...&w=64&q=75
+        if (logoSrc.includes('/_next/image?url=')) {
+          try {
+            const urlMatch = logoSrc.match(/url=([^&]+)/);
+            if (urlMatch) {
+              logoSrc = decodeURIComponent(urlMatch[1]);
+            }
+          } catch {
+            // If decoding fails, try to use the src as-is
+          }
+        }
+        
+        // Handle both absolute URLs and relative paths
+        if (logoSrc) {
+          try {
+            logo = new URL(logoSrc, baseUrl).toString();
+          } catch {
+            // If it's already an absolute URL, use it directly
+            logo = logoSrc.startsWith('http') ? logoSrc : '';
+          }
+        }
+      }
 
-      const href = startupLinkEl?.getAttribute('href') ?? '';
+      // Use the href we extracted from the raw HTML
       const link = href ? new URL(href, baseUrl).toString() : baseUrl;
 
       companies.push({
@@ -155,9 +176,8 @@ async function writeCompaniesJson(records) {
 }
 
 async function main() {
-  await ensureAllowed(TRUSTMRR_URL);
-  const html = await fetchText(TRUSTMRR_URL);
-  const companies = extractCompaniesFromHtml(html, TRUSTMRR_URL);
+  const html = await readHtmlFile();
+  const companies = extractCompaniesFromHtml(html, BASE_URL);
   await writeCompaniesJson(companies);
 }
 

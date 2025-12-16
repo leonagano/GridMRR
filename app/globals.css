@@ -101,10 +101,16 @@ body {
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
-  cursor: default;
+  cursor: pointer;
   color: #0f172a;
+  text-decoration: none;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-  margin: 2px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.treemap-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
 }
 
 .treemap-card-inner {
@@ -119,6 +125,8 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   gap: 8px;
+  position: relative;
+  width: 100%;
 }
 
 .treemap-logo-wrapper {
@@ -147,9 +155,59 @@ body {
 }
 
 .treemap-mrr {
-  margin-top: 6px;
+  margin-top: 0;
+  margin-left: auto;
   font-size: 14px;
   font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Compact style for columns 3+ */
+.treemap-card-compact .treemap-logo-wrapper {
+  width: 20px;
+  height: 20px;
+}
+
+.treemap-card-compact .treemap-logo {
+  width: 20px;
+  height: 20px;
+}
+
+.treemap-card-compact .treemap-mrr {
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* Minimal style for last 4 columns - smaller logo, no text, centered */
+.treemap-card-minimal .treemap-card-inner {
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.treemap-card-minimal .treemap-card-header {
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.treemap-card-minimal .treemap-logo-wrapper {
+  width: 16px;
+  height: 16px;
+  margin: 0 auto;
+}
+
+.treemap-card-minimal .treemap-logo {
+  width: 16px;
+  height: 16px;
+}
+
+.treemap-card-minimal .treemap-mrr {
+  display: none;
+}
+
+.treemap-card-minimal .treemap-name {
+  display: none;
 }
 
 .treemap-growth {

@@ -97,20 +97,31 @@ interface TreemapNode extends Company {
 // Column-first packing algorithm: fill columns vertically, then move to next column
 function buildTreemap(data: Company[], containerWidth: number, containerHeight: number): TreemapNode[] {
   const totalMRR = data.reduce((sum, d) => sum + d.mrr, 0) || 1;
-  // Scale down all areas by 0.75 to make blocks smaller and fit more companies
+  
+  // Calculate areas proportionally to MRR, but ensure minimum area for visibility
+  // Use a higher areaScale to make differences more visible
   const areaScale = 0.75;
+  const minArea = containerWidth * containerHeight * 0.001; // Minimum 0.1% of total area
+  
   const items = [...data]
     .sort((a, b) => b.mrr - a.mrr)
-    .map((d) => ({ ...d, area: (d.mrr / totalMRR) * containerWidth * containerHeight * areaScale }));
+    .map((d) => {
+      // Calculate area proportional to MRR
+      const proportionalArea = (d.mrr / totalMRR) * containerWidth * containerHeight * areaScale;
+      // Ensure minimum area but preserve relative differences
+      const area = Math.max(proportionalArea, minArea);
+      return { ...d, area };
+    });
 
   const nodes: TreemapNode[] = [];
   
-  // Minimum dimensions to ensure square-ish blocks - increased for more square shapes
-  const minWidth = containerWidth * 0.08; // 8% of container width - wider for more square blocks
-  const minHeight = containerHeight * 0.03; // 3% of container height
+  // Reduced minimum dimensions to allow more visual variation
+  const minWidth = containerWidth * 0.03; // 3% of container width (reduced from 6%)
+  const minHeight = containerHeight * 0.025; // 2.5% of container height (reduced from 5%)
   
-  // Maximum aspect ratio to enforce square-ish shapes (width/height or height/width)
-  const maxAspectRatio = 1.5; // Blocks should be at most 1.5:1 (or 1:1.5)
+  // Maximum aspect ratio to enforce square-ish shapes (width/height)
+  // We want height >= width, so maxAspectRatio should be <= 1.0
+  const maxAspectRatio = 0.9; // Blocks should be at most 0.9:1 (width:height), meaning height is always >= width
   
   // Spacing between items (in pixels, will be converted to percentage)
   const gap = 0.5; // 2px small gap between items and columns
@@ -126,24 +137,22 @@ function buildTreemap(data: Company[], containerWidth: number, containerHeight: 
   const columns: Column[] = [];
   
   // Helper to find or create a column where an item fits
-  // Tries to make items square by using sqrt(area) as the ideal width
+  // Prioritizes height >= width for square-ish blocks
   function findOrCreateColumn(itemArea: number): { column: Column; itemWidth: number; itemHeight: number } {
     // Calculate ideal square dimensions for this item
+    // Start with square root, but prioritize height
     const idealSquareSize = Math.sqrt(itemArea);
-    let idealWidth = Math.max(idealSquareSize, minWidth);
-    let idealHeight = Math.max(itemArea / idealWidth, minHeight);
+    let idealHeight = Math.max(idealSquareSize, minHeight);
+    let idealWidth = Math.max(itemArea / idealHeight, minWidth);
     
-    // Enforce aspect ratio - ensure width and height are within maxAspectRatio
+    // Enforce aspect ratio - ensure height >= width (width/height <= maxAspectRatio)
     let idealAspectRatio = idealWidth / idealHeight;
     if (idealAspectRatio > maxAspectRatio) {
-      // Too wide, make it taller (more square)
+      // Too wide, make it taller to maintain height >= width
       idealHeight = idealWidth / maxAspectRatio;
       idealWidth = Math.max(itemArea / idealHeight, minWidth);
-    } else if (idealAspectRatio < 1 / maxAspectRatio) {
-      // Too tall, make it wider (more square)
-      idealWidth = idealHeight * maxAspectRatio;
-      idealHeight = Math.max(itemArea / idealWidth, minHeight);
     }
+    // If it's already taller than wide, that's fine - we want height >= width
     
     // Try to find an existing column with similar width (within 20% tolerance - stricter for more square)
     const widthTolerance = idealWidth * 0.2;
@@ -155,17 +164,11 @@ function buildTreemap(data: Company[], containerWidth: number, containerHeight: 
         let itemHeight = Math.max(itemArea / col.width, minHeight);
         const itemWidth = col.width;
         
-        // Enforce aspect ratio to keep it square
+        // Enforce aspect ratio - ensure height >= width
         let colAspectRatio = itemWidth / itemHeight;
         if (colAspectRatio > maxAspectRatio) {
+          // Too wide, make it taller
           itemHeight = itemWidth / maxAspectRatio;
-        } else if (colAspectRatio < 1 / maxAspectRatio) {
-          // This shouldn't happen if width matches, but check anyway
-          const adjustedWidth = itemHeight * maxAspectRatio;
-          if (adjustedWidth <= col.width * 1.1) {
-            // Can adjust slightly
-            itemHeight = itemWidth / maxAspectRatio;
-          }
         }
         
         const neededHeight = itemHeight + (col.currentY > 0 ? gap : 0);
@@ -182,7 +185,7 @@ function buildTreemap(data: Company[], containerWidth: number, containerHeight: 
       let itemHeight = Math.max(itemArea / col.width, minHeight);
       const itemWidth = col.width;
       
-      // Enforce aspect ratio
+      // Enforce aspect ratio - ensure height >= width
       let fallbackAspectRatio = itemWidth / itemHeight;
       if (fallbackAspectRatio > maxAspectRatio) {
         itemHeight = itemWidth / maxAspectRatio;
@@ -194,13 +197,23 @@ function buildTreemap(data: Company[], containerWidth: number, containerHeight: 
       }
     }
     
-    // No existing column fits, create a new one with ideal square width
+    // No existing column fits, create a new one with ideal width
+    // Calculate ideal width based on desired height (prioritize height >= width)
+    const idealHeightForNewCol = Math.max(Math.sqrt(itemArea), minHeight);
+    let idealWidthForNewCol = Math.max(itemArea / idealHeightForNewCol, minWidth);
+    
+    // Ensure height >= width
+    let newColAspectRatio = idealWidthForNewCol / idealHeightForNewCol;
+    if (newColAspectRatio > maxAspectRatio) {
+      idealWidthForNewCol = idealHeightForNewCol * maxAspectRatio;
+    }
+    
     const newX = columns.length > 0 
       ? columns[columns.length - 1].x + columns[columns.length - 1].width + gap - 0.3
       : 0;
     
     // Make sure we don't exceed container width
-    let columnWidth = idealWidth;
+    let columnWidth = idealWidthForNewCol;
     if (newX + columnWidth > containerWidth) {
       // Use remaining width if we're near the edge
       const remainingWidth = containerWidth - newX;
@@ -231,9 +244,9 @@ function buildTreemap(data: Company[], containerWidth: number, containerHeight: 
     columns.push(newCol);
     
     let itemHeight = Math.max(itemArea / columnWidth, minHeight);
-    // Enforce aspect ratio for new column
-    let newColAspectRatio = columnWidth / itemHeight;
-    if (newColAspectRatio > maxAspectRatio) {
+    // Enforce aspect ratio for new column - ensure height >= width
+    let finalAspectRatio = columnWidth / itemHeight;
+    if (finalAspectRatio > maxAspectRatio) {
       itemHeight = columnWidth / maxAspectRatio;
     }
     
@@ -301,41 +314,52 @@ export default function Page() {
         <section className="app-main">
           <div className="treemap-root">
             <div className="treemap-grid">
-              {treemapNodes.map((node, index) => {
-                const bg = pickGradient(index);
-                const style: React.CSSProperties = {
-                  position: 'absolute',
-                  left: `${node.x}%`,
-                  top: `${node.y}%`,
-                  width: `${node.width}%`,
-                  height: `${node.height}%`,
-                  background: bg,
-                };
-
-                const isColumn4OrLater = (node.columnIndex ?? 0) >= 3; // 0-indexed, so 3 = 4th column
+              {(() => {
+                // Find the maximum column index to determine last 4 columns
+                const maxColumnIndex = Math.max(...treemapNodes.map(n => n.columnIndex ?? 0));
+                const last4ColumnsStart = Math.max(0, maxColumnIndex - 3); // Last 4 columns
                 
-                return (
-                  <div
-                    key={node.name}
-                    className="treemap-card"
-                    style={style}
-                    title={`${node.name} — ${formatMonthly(node.mrr)} / mo`}
-                  >
-                    <div className="treemap-card-inner">
-                      <div className="treemap-card-header">
-                        {node.logo && (
-                          <div className="treemap-logo-wrapper">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={node.logo} alt={node.name} className="treemap-logo" />
-                          </div>
-                        )}
-                        <div className="treemap-mrr">{formatMRRAbbreviated(node.mrr)}</div>
+                return treemapNodes.map((node, index) => {
+                  const bg = pickGradient(index);
+                  const style: React.CSSProperties = {
+                    position: 'absolute',
+                    left: `${node.x}%`,
+                    top: `${node.y}%`,
+                    width: `${node.width}%`,
+                    height: `${node.height}%`,
+                    background: bg,
+                  };
+
+                  const columnIndex = node.columnIndex ?? 0;
+                  const isColumn3OrLater = columnIndex >= 2; // 0-indexed, so 2 = 3rd column
+                  const isLast4Columns = columnIndex >= last4ColumnsStart;
+                  
+                  return (
+                    <a
+                      key={node.name}
+                      href={node.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`treemap-card ${isColumn3OrLater ? 'treemap-card-compact' : ''} ${isLast4Columns ? 'treemap-card-minimal' : ''}`}
+                      style={style}
+                      title={`${node.name} — ${formatMonthly(node.mrr)} / mo`}
+                    >
+                      <div className="treemap-card-inner">
+                        <div className="treemap-card-header">
+                          {node.logo && (
+                            <div className="treemap-logo-wrapper">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={node.logo} alt={node.name} className="treemap-logo" />
+                            </div>
+                          )}
+                          {!isLast4Columns && <div className="treemap-mrr">{formatMRRAbbreviated(node.mrr)}</div>}
+                        </div>
+                        {!isColumn3OrLater && <div className="treemap-name">{node.name}</div>}
                       </div>
-                      {!isColumn4OrLater && <div className="treemap-name">{node.name}</div>}
-                    </div>
-                  </div>
-                );
-              })}
+                    </a>
+                  );
+                });
+              })()}
             </div>
           </div>
         </section>
